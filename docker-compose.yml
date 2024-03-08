@@ -1,0 +1,30 @@
+version: "3"
+services:
+  db:
+    container_name: mydb
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    ports:
+      - "1433:1433"
+    environment:
+      SA_PASSWORD: "Password123"
+      ACCEPT_EULA: "Y"
+    networks:
+      - phr_network
+  app:
+    container_name: myapp
+    build: ./
+    ports:
+      - "8080:8080"
+    networks:
+      - phr_network
+    depends_on:
+      - db
+    environment:
+      SQL_SERVER: "db"
+      SQL_DATABASE: "ACT3"
+      SQL_USER: "SA"
+      SQL_PASSWORD: "Password123"
+
+networks:
+  phr_network:
+    driver: bridge
