@@ -1,17 +1,23 @@
 import http.server
 import json
-import pyodbc
+import mysql.connector
 import cgi
 import hashlib
 
-# Establish connection to SQL Server database
-conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost.;DATABASE=ACT3;UID=SA;PWD=Password123')
+# Establish connection to MySQL database
+conn = mysql.connector.connect(
+    host='localhost',
+    user='root',
+    password='Thienandeptrai123',
+    port = 3306,
+    database='thienan'
+)
 cursor = conn.cursor()
 
 # Create users table if not exists
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
-        user_id INT PRIMARY KEY IDENTITY(1,1),
+        user_id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(50) NOT NULL,
         password_hashed VARCHAR(50) NOT NULL
     )
@@ -20,7 +26,7 @@ cursor.execute("""
 # Create notes table if not exists
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS notes (
-        note_id INT PRIMARY KEY IDENTITY(1,1),
+        note_id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(100) NOT NULL,
         content TEXT NOT NULL
     )
@@ -41,7 +47,7 @@ class PHRServer(http.server.BaseHTTPRequestHandler):
         else:
             self._set_response()
             response = {
-                'message': 'Welcome to Personal Health Record',
+                'message': 'Welcome to Personal Health Record (PHR) system',
                 'endpoints': [
                     {'login': 'Login endpoint'},
                     {'signup': 'Signup endpoint'},
@@ -55,7 +61,7 @@ class PHRServer(http.server.BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             new_note = json.loads(post_data.decode())
-            cursor.execute("INSERT INTO notes (title, content) VALUES (?, ?)", (new_note['title'], new_note['content']))
+            cursor.execute("INSERT INTO notes (title, content) VALUES (%s, %s)", (new_note['title'], new_note['content']))
             conn.commit()
             self._set_response()
             self.wfile.write(json.dumps(new_note).encode())
@@ -70,7 +76,7 @@ class PHRServer(http.server.BaseHTTPRequestHandler):
                 username = fields.get('username')[0]
                 password = fields.get('password')[0]
                 password_hashed = hashlib.sha256(password.encode()).hexdigest()
-                cursor.execute("SELECT * FROM users WHERE username = ? AND password_hashed = ?", (username, password_hashed))
+                cursor.execute("SELECT * FROM users WHERE username = %s AND password_hashed = %s", (username, password_hashed))
 
                 if cursor.fetchall():
                     self.send_response(301)
@@ -92,7 +98,7 @@ class PHRServer(http.server.BaseHTTPRequestHandler):
                 username = fields.get('username')[0]
                 password = fields.get('password')[0]
                 password_hashed = hashlib.sha256(password.encode()).hexdigest()
-                cursor.execute("INSERT INTO users (username, password_hashed) VALUES (?, ?)", (username, password_hashed))
+                cursor.execute("INSERT INTO users (username, password_hashed) VALUES (%s, %s)", (username, password_hashed))
                 conn.commit()
 
                 self.send_response(301)
